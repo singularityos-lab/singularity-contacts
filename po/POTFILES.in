@@ -1,0 +1,8 @@
+src/app.vala
+src/window.vala
+src/editor.vala
+src/books.vala
+src/account_book.vala
+src/avatar.vala
+src/search.vala
+widget/favorites_widget.vala

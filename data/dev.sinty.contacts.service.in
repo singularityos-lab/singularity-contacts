@@ -1,0 +1,3 @@
+[D-BUS Service]
+Name=dev.sinty.contacts
+Exec=@bindir@/singularity-contacts --gapplication-service

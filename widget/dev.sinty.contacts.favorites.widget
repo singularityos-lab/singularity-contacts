@@ -1,0 +1,8 @@
+[Widget]
+Id=contacts.favorites
+ProviderId=dev.sinty.contacts
+Name=Favorite Contacts
+IconName=starred-symbolic
+Sizes=2x1;2x2;4x1;4x2
+Module=libsingularity-contacts-widget.so
+ModuleSymbol=singularity_contacts_widget_new

@@ -1,0 +1,16 @@
+[Desktop Entry]
+Name=Contacts
+Comment=The people you know
+Exec=singularity-contacts %U
+Icon=dev.sinty.contacts
+Terminal=false
+Type=Application
+Categories=Office;ContactManagement;
+MimeType=text/vcard;text/x-vcard;
+Keywords=contacts;address;book;people;phone;email;vcard;
+StartupWMClass=dev.sinty.contacts
+Actions=new-contact;
+
+[Desktop Action new-contact]
+Name=New Contact
+Exec=singularity-contacts --new-contact
