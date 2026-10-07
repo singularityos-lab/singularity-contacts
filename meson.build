@@ -20,8 +20,8 @@ if not meson.is_subproject() and libsingularity_dep.type_name() == 'internal'
 endif
 
 executable('singularity-contacts',
-  files('src/vcard.vala', 'src/books.vala', 'src/account_book.vala', 'src/avatar.vala', 'src/editor.vala', 'src/search.vala', 'src/window.vala', 'src/app.vala'),
-  dependencies: [gtk_dep, gee_dep, libsingularity_dep],
+  files('src/vcard.vala', 'src/books.vala', 'src/account_book.vala', 'src/avatar.vala', 'src/editor.vala', 'src/search.vala', 'src/hub.vala', 'src/window.vala', 'src/app.vala'),
+  dependencies: [gtk_dep, gee_dep, libsingularity_dep, dependency('sqlite3')],
   install: true
 )
 

@@ -464,6 +464,7 @@ namespace Singularity.Apps.Contacts {
             var fav = action_pill (c.favorite ? "starred-symbolic" : "non-starred-symbolic", c.favorite ? _("Favorite") : _("Add to Favorites"), () => toggle_favorite ());
             if (c.favorite) fav.add_css_class ("contacts-fav-on");
             actions.append (fav);
+            actions.append (action_pill ("singularity-share-symbolic", _("Share"), () => share_contact (c)));
             detail.append (actions);
 
             if (c.phones.size > 0) {
@@ -515,6 +516,37 @@ namespace Singularity.Apps.Contacts {
                 }
                 detail.append (g);
             }
+            string[] mails = {};
+            foreach (var e in c.emails) mails += e.value;
+            var recent = ContactHub.recent_mail (mails);
+            if (recent.size > 0) {
+                var g = new PreferencesGroup (_("Recent Mail"));
+                string first = c.display_name.split (" ")[0];
+                foreach (var m in recent) {
+                    int64 id = m.id;
+                    string when = new DateTime.from_unix_local (m.date).format ("%-d %b %Y");
+                    var r = new ActionRow (m.subject != "" ? m.subject : _("No Subject"), m.from_them ? _("From %s, %s").printf (first, when) : _("You wrote, %s").printf (when));
+                    r.add_suffix (new Image.from_icon_name ("go-next-symbolic"));
+                    r.activated.connect (() => ShareTargets.activate_app_action.begin ("dev.sinty.lettere", "show-message", new Variant.int64 (id)));
+                    g.add_row (r);
+                }
+                detail.append (g);
+            }
+            var together = new PreferencesGroup (_("Upcoming Together"));
+            together.visible = false;
+            detail.append (together);
+            ContactHub.upcoming_together.begin (mails, 60, (o, res) => {
+                var events = ContactHub.upcoming_together.end (res);
+                foreach (var e in events) {
+                    string key = e.key;
+                    string when = e.all_day ? e.start.format ("%A %-d %B") : e.start.format ("%A %-d %B, %H:%M");
+                    var r = new ActionRow (e.title, when);
+                    r.add_suffix (new Image.from_icon_name ("go-next-symbolic"));
+                    r.activated.connect (() => ShareTargets.activate_app_action.begin ("dev.sinty.calendar", "open-event", new Variant.string (key)));
+                    together.add_row (r);
+                }
+                together.visible = events.size > 0;
+            });
             if (c.urls.size > 0 || c.birthday != "") {
                 var g = new PreferencesGroup (_("More"));
                 foreach (var u in c.urls) {
@@ -546,6 +578,20 @@ namespace Singularity.Apps.Contacts {
                 from.add_css_class ("dim-label");
                 from.add_css_class ("caption");
                 detail.append (from);
+            }
+        }
+
+        private void share_contact (Contact c) {
+            string dir = Path.build_filename (Environment.get_user_cache_dir (), "singularity", "contacts-share");
+            DirUtils.create_with_parents (dir, 0700);
+            string name = (c.display_name != "" ? c.display_name : _("Contact")).replace ("/", "-");
+            string path = Path.build_filename (dir, name + ".vcf");
+            try {
+                FileUtils.set_contents (path, VCard.serialize (c));
+                FileUtils.chmod (path, 0600);
+                Singularity.Share.files (this, { File.new_for_path (path) });
+            } catch (Error e) {
+                warning ("Contacts: share failed: %s", e.message);
             }
         }
 
