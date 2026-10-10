@@ -18,43 +18,25 @@ namespace Singularity.Apps.Contacts {
     }
 
     public class ContactHub : Object {
-        public static string mail_db () {
-            return Path.build_filename (Environment.get_user_data_dir (), "singularity-lettere", "cache.db");
-        }
-
-        public static Gee.List<MailRef> recent_mail (string[] emails, int limit = 5) {
+        public static async Gee.List<MailRef> recent_mail (string[] emails, int limit = 5) {
             var result = new Gee.ArrayList<MailRef> ();
-            if (emails.length == 0 || !FileUtils.test (mail_db (), FileTest.EXISTS)) return result;
-            Sqlite.Database db;
-            if (Sqlite.Database.open_v2 (mail_db (), out db, Sqlite.OPEN_READONLY) != Sqlite.OK) return result;
-            var where = new StringBuilder ();
-            for (int i = 0; i < emails.length; i++) {
-                if (i > 0) where.append (" OR ");
-                where.append ("lower(sender_email) = ? OR lower(to_list) LIKE ? OR lower(cc_list) LIKE ?");
-            }
-            string sql = "SELECT id, subject, date, sender_email FROM messages WHERE %s ORDER BY date DESC LIMIT %d".printf (where.str, limit * 3);
-            Sqlite.Statement st;
-            if (db.prepare_v2 (sql, -1, out st) != Sqlite.OK) return result;
-            int n = 1;
-            foreach (string e in emails) {
-                string low = e.down ();
-                st.bind_text (n++, low);
-                st.bind_text (n++, "%" + low + "%");
-                st.bind_text (n++, "%" + low + "%");
-            }
-            var seen = new Gee.HashSet<string> ();
-            while (st.step () == Sqlite.ROW && result.size < limit) {
-                var m = new MailRef ();
-                m.id = st.column_int64 (0);
-                m.subject = st.column_text (1) ?? "";
-                m.date = st.column_int64 (2);
-                string sender = (st.column_text (3) ?? "").down ();
-                m.from_them = false;
-                foreach (string e in emails) if (e.down () == sender) m.from_them = true;
-                string key = m.subject + m.date.to_string ();
-                if (seen.contains (key)) continue;
-                seen.add (key);
-                result.add (m);
+            if (emails.length == 0 || !Capabilities.available (Contracts.MAIL)) return result;
+            try {
+                var reply = yield Capabilities.call (Contracts.MAIL, "RecentMessagesWith", new Variant ("(^asi)", emails, limit), new VariantType ("(a(xsxb))"), 10000);
+                var iter = reply.get_child_value (0).iterator ();
+                int64 id, date;
+                string subject;
+                bool from_them;
+                while (iter.next ("(xsxb)", out id, out subject, out date, out from_them)) {
+                    var m = new MailRef ();
+                    m.id = id;
+                    m.subject = subject;
+                    m.date = date;
+                    m.from_them = from_them;
+                    result.add (m);
+                }
+            } catch (Error e) {
+                debug ("Contacts: recent mail: %s", e.message);
             }
             return result;
         }

@@ -518,20 +518,22 @@ namespace Singularity.Apps.Contacts {
             }
             string[] mails = {};
             foreach (var e in c.emails) mails += e.value;
-            var recent = ContactHub.recent_mail (mails);
-            if (recent.size > 0) {
-                var g = new PreferencesGroup (_("Recent Mail"));
-                string first = c.display_name.split (" ")[0];
+            var mail_group = new PreferencesGroup (_("Recent Mail"));
+            mail_group.visible = false;
+            detail.append (mail_group);
+            string first = c.display_name.split (" ")[0];
+            ContactHub.recent_mail.begin (mails, 5, (o, res) => {
+                var recent = ContactHub.recent_mail.end (res);
                 foreach (var m in recent) {
                     int64 id = m.id;
                     string when = new DateTime.from_unix_local (m.date).format ("%-d %b %Y");
                     var r = new ActionRow (m.subject != "" ? m.subject : _("No Subject"), m.from_them ? _("From %s, %s").printf (first, when) : _("You wrote, %s").printf (when));
                     r.add_suffix (new Image.from_icon_name ("go-next-symbolic"));
-                    r.activated.connect (() => ShareTargets.activate_app_action.begin ("dev.sinty.lettere", "show-message", new Variant.int64 (id)));
-                    g.add_row (r);
+                    r.activated.connect (() => Capabilities.call_and_forget (Contracts.MAIL, "ShowMessage", new Variant ("(x)", id)));
+                    mail_group.add_row (r);
                 }
-                detail.append (g);
-            }
+                mail_group.visible = recent.size > 0;
+            });
             var together = new PreferencesGroup (_("Upcoming Together"));
             together.visible = false;
             detail.append (together);
@@ -542,7 +544,10 @@ namespace Singularity.Apps.Contacts {
                     string when = e.all_day ? e.start.format ("%A %-d %B") : e.start.format ("%A %-d %B, %H:%M");
                     var r = new ActionRow (e.title, when);
                     r.add_suffix (new Image.from_icon_name ("go-next-symbolic"));
-                    r.activated.connect (() => ShareTargets.activate_app_action.begin ("dev.sinty.calendar", "open-event", new Variant.string (key)));
+                    if (Capabilities.available (Contracts.CALENDAR)) {
+                        string[] parts = key.split ("\t");
+                        if (parts.length == 3) r.activated.connect (() => Capabilities.call_and_forget (Contracts.CALENDAR, "OpenEvent", new Variant ("(ssx)", parts[0], parts[1], int64.parse (parts[2]))));
+                    }
                     together.add_row (r);
                 }
                 together.visible = events.size > 0;
