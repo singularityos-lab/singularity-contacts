@@ -460,6 +460,11 @@ namespace Singularity.Apps.Contacts {
             var actions = new Box (Orientation.HORIZONTAL, 8);
             actions.halign = Align.CENTER;
             if (c.emails.size > 0) actions.append (action_pill ("mail-send-symbolic", _("Email"), () => launch ("mailto:" + c.emails[0].value)));
+            if (Singularity.Messaging.installed () && (c.emails.size > 0 || c.phones.size > 0)) {
+                string address = c.emails.size > 0 ? c.emails[0].value : c.phones[0].value.replace (" ", "");
+                string person = c.display_name;
+                actions.append (action_pill ("chat-message-new-symbolic", _("Message"), () => Singularity.Messaging.compose (person, address, "")));
+            }
             if (c.phones.size > 0) actions.append (action_pill ("call-start-symbolic", _("Call"), () => launch ("tel:" + c.phones[0].value.replace (" ", ""))));
             var fav = action_pill (c.favorite ? "starred-symbolic" : "non-starred-symbolic", c.favorite ? _("Favorite") : _("Add to Favorites"), () => toggle_favorite ());
             if (c.favorite) fav.add_css_class ("contacts-fav-on");
