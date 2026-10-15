@@ -120,7 +120,7 @@ namespace Singularity.Apps.Contacts {
         }
 
         private void quit_app () {
-            foreach (var w in get_windows ()) w.close ();
+            foreach (var w in get_windows ().copy ()) w.close ();
         }
 
         private ContactsWindow main_window () {
