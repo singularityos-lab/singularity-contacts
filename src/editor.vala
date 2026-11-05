@@ -15,7 +15,7 @@ namespace Singularity.Apps.Contacts {
         private EntryRow job;
         private EntryRow birthday;
         private TextView note;
-        private DropDown? book_drop;
+        private ChoiceButton? book_drop;
         private Gee.ArrayList<AddressBook> writable = new Gee.ArrayList<AddressBook> ();
         private FieldList phones;
         private FieldList emails;
@@ -63,11 +63,11 @@ namespace Singularity.Apps.Contacts {
             public Entry add_field (Field f) {
                 var row = new Box (Orientation.HORIZONTAL, 8);
                 row.add_css_class ("contacts-field-row");
-                DropDown? kind = null;
+                ChoiceButton? kind = null;
                 if (with_kind) {
                     var model = new StringList (null);
                     foreach (string l in Editor.kind_labels ()) model.append (l);
-                    kind = new DropDown (model, null);
+                    kind = new ChoiceButton (model, null);
                     kind.selected = Editor.kind_index (f.kind);
                     kind.valign = Align.CENTER;
                     row.append (kind);
@@ -89,7 +89,7 @@ namespace Singularity.Apps.Contacts {
                 });
                 row.append (del);
                 row.set_data<Entry> ("entry", entry);
-                if (kind != null) row.set_data<DropDown> ("kind", kind);
+                if (kind != null) row.set_data<ChoiceButton> ("kind", kind);
                 rows.add (row);
                 group.add_row (row);
                 return entry;
@@ -100,7 +100,7 @@ namespace Singularity.Apps.Contacts {
                 foreach (var r in rows) {
                     var e = r.get_data<Entry> ("entry");
                     if (e.text.strip () == "") continue;
-                    var k = r.get_data<DropDown> ("kind");
+                    var k = r.get_data<ChoiceButton> ("kind");
                     list.add (new Field (k != null ? Editor.KINDS[k.selected] : default_kind, e.text.strip ()));
                 }
                 return list;
@@ -108,7 +108,7 @@ namespace Singularity.Apps.Contacts {
         }
 
         private class AddressEditor : Box {
-            public DropDown kind;
+            public ChoiceButton kind;
             public EntryRow street;
             public EntryRow postal;
             public EntryRow city;
@@ -120,7 +120,7 @@ namespace Singularity.Apps.Contacts {
                 var g = new PreferencesGroup ();
                 var model = new StringList (null);
                 foreach (string l in Editor.kind_labels ()) model.append (l);
-                kind = new DropDown (model, null);
+                kind = new ChoiceButton (model, null);
                 kind.selected = Editor.kind_index (a.kind);
                 var head = new ActionRow (_("Address"));
                 kind.valign = Align.CENTER;
@@ -263,7 +263,7 @@ namespace Singularity.Apps.Contacts {
                         model.append (writable[i].full_name);
                         if (writable[i].id == contact.source_id) sel = i;
                     }
-                    book_drop = new DropDown (model, null);
+                    book_drop = new ChoiceButton (model, null);
                     book_drop.selected = sel;
                     var g = new PreferencesGroup ();
                     var r = new ActionRow (_("Save In"));
