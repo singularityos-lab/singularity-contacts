@@ -279,6 +279,7 @@ namespace Singularity.Apps.Contacts {
 
         private void update_list_status () {
             int visible = 0;
+            bool current_shown = false;
             for (int i = 0; ; i++) {
                 var row = list.get_row_at_index (i);
                 if (row == null) break;
@@ -287,6 +288,7 @@ namespace Singularity.Apps.Contacts {
                 if (filter_source != "all" && filter_source != "favorites" && c.source_id != filter_source) continue;
                 if (!c.matches (query)) continue;
                 visible++;
+                if (current != null && c.source_id == current.source_id && c.uid == current.uid) current_shown = true;
             }
             string status = "";
             var b = library.book (filter_source);
@@ -299,7 +301,7 @@ namespace Singularity.Apps.Contacts {
                 list.unselect_all ();
                 detail_scroll.child = build_empty_state ();
                 sync_bubbles ();
-            } else if (current == null) {
+            } else if (current == null || !current_shown) {
                 var first = first_visible ();
                 if (first != null) list.select_row (first);
             }
