@@ -6,6 +6,7 @@ Icon=dev.sinty.contacts
 Terminal=false
 Type=Application
 Categories=Office;ContactManagement;
+X-Sinty-FormFactors=desktop;tablet;phone
 MimeType=text/vcard;text/x-vcard;
 Keywords=contacts;address;book;people;phone;email;vcard;
 StartupWMClass=dev.sinty.contacts
