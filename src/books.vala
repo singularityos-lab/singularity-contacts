@@ -63,6 +63,10 @@ namespace Singularity.Apps.Contacts {
             }
         }
 
+        public string path_of (Contact c) {
+            return Path.build_filename (dir, c.href);
+        }
+
         public override async void load () {
             var list = new Gee.ArrayList<Contact> ();
             try {

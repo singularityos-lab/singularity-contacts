@@ -2,7 +2,7 @@ using Gtk;
 
 namespace Singularity.Apps.Contacts {
 
-    public class ContactsApp : Singularity.Application {
+    public class ContactsApp : Singularity.Application, Singularity.Migration.Migratable {
         public Library library;
         private string? pending_action;
 
@@ -148,6 +148,46 @@ namespace Singularity.Apps.Contacts {
                 return;
             }
             main_window ();
+        }
+
+        public Variant save_model () {
+            return new VariantDict ().end ();
+        }
+
+        public async void restore_model (Variant model) throws Error {
+        }
+
+        public string window_kind (Gtk.Window w) {
+            return (w is ContactsWindow) ? "contacts" : "";
+        }
+
+        public Variant save_window (Gtk.Window w) {
+            return ((ContactsWindow) w).save_migration ();
+        }
+
+        public string[] files () {
+            string[] found = {};
+            foreach (var w in get_windows ()) {
+                var cw = w as ContactsWindow;
+                if (cw == null) continue;
+                foreach (string f in cw.migration_files ()) if (!(f in found)) found += f;
+            }
+            return found;
+        }
+
+        public async Gtk.Window? rebuild_window (string kind, Variant data) throws Error {
+            if (kind != "contacts") return null;
+            while (!library.started) {
+                ulong id = library.changed.connect (() => rebuild_window.callback ());
+                yield;
+                library.disconnect (id);
+            }
+            foreach (var old in get_windows ().copy ()) {
+                if (old is ContactsWindow) old.destroy ();
+            }
+            var w = new ContactsWindow (this);
+            w.restore_migration (data);
+            return w;
         }
 
         public override void open (File[] files, string hint) {

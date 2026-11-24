@@ -105,8 +105,10 @@ namespace Singularity.Apps.Contacts {
             });
             list.row_selected.connect ((row) => {
                 if (row == null) return;
+                var c = row.get_data<Contact> ("contact");
+                if (editing && c == current) return;
                 if (editing) stop_edit (true);
-                show_contact (row.get_data<Contact> ("contact"));
+                show_contact (c);
             });
             var scroll = new ScrolledWindow ();
             scroll.hscrollbar_policy = PolicyType.NEVER;
@@ -684,8 +686,12 @@ namespace Singularity.Apps.Contacts {
 
         private void start_edit () {
             if (current == null) return;
+            open_editor (current.copy ());
+        }
+
+        private void open_editor (Contact draft) {
             editing = true;
-            editor = new Editor (this, current.copy (), library);
+            editor = new Editor (this, draft, library);
             var box = new Box (Orientation.VERTICAL, 0);
             apply_view_edge (box);
             box.margin_bottom = 32;
@@ -695,6 +701,44 @@ namespace Singularity.Apps.Contacts {
             detail_scroll.child = new Clamp (box) { maximum = 560 };
             sync_bubbles ();
             editor.focus_first ();
+        }
+
+        public Variant save_migration () {
+            var d = new VariantDict ();
+            d.insert_value ("source", new Variant.string (filter_source));
+            d.insert_value ("query", new Variant.string (query));
+            if (current != null) d.insert_value ("contact", new Variant ("(ss)", current.source_id, current.uid));
+            if (editing && editor != null) d.insert_value ("draft", editor.save_draft ());
+            return d.end ();
+        }
+
+        public void restore_migration (Variant data) {
+            var d = new VariantDict (data);
+            string source_id = "", uid = "";
+            var who = d.lookup_value ("contact", new VariantType ("(ss)"));
+            if (who != null) who.get ("(ss)", out source_id, out uid);
+            query = (d.lookup_value ("query", VariantType.STRING) ?? new Variant.string ("")).get_string ();
+            search.text = query;
+            if (uid != "") pending_key = source_id + "/" + uid;
+            select_source ((d.lookup_value ("source", VariantType.STRING) ?? new Variant.string ("all")).get_string ());
+            rebuild ();
+            var draft = d.lookup_value ("draft", null);
+            if (draft == null) return;
+            if (current == null || current.source_id != source_id || current.uid != uid) {
+                var c = new Contact ();
+                c.source_id = source_id != "" ? source_id : "local";
+                c.uid = uid;
+                current = c;
+                stack.visible_child_name = "main";
+                list.unselect_all ();
+            }
+            open_editor (current.copy ());
+            editor.restore_draft (draft);
+        }
+
+        public string[] migration_files () {
+            if (current == null || current.source_id != library.local.id || current.href == "") return {};
+            return { Singularity.Migration.portable_path (File.new_for_path (library.local.path_of (current))) };
         }
 
         private void stop_edit (bool save) {

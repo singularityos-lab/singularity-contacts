@@ -95,6 +95,21 @@ namespace Singularity.Apps.Contacts {
                 return entry;
             }
 
+            public Variant save_kinds () {
+                var kinds = new VariantBuilder (new VariantType ("as"));
+                foreach (var r in rows) {
+                    var k = r.get_data<ChoiceButton> ("kind");
+                    kinds.add ("s", k != null ? Editor.KINDS[k.selected] : default_kind);
+                }
+                return kinds.end ();
+            }
+
+            public void restore_kinds (Variant kinds) {
+                foreach (var r in rows) group.remove_row (r);
+                rows.clear ();
+                foreach (string k in kinds.get_strv ()) add_field (new Field (k, ""));
+            }
+
             public Gee.ArrayList<Field> collect () {
                 var list = new Gee.ArrayList<Field> ();
                 foreach (var r in rows) {
@@ -356,6 +371,38 @@ namespace Singularity.Apps.Contacts {
             if (book_drop != null && book_drop.selected < writable.size) c.source_id = writable[(int) book_drop.selected].id;
             if (c.source_id == "") c.source_id = "local";
             return c;
+        }
+
+        public Variant save_draft () {
+            var adrs = new VariantBuilder (new VariantType ("as"));
+            foreach (var ed in address_editors) adrs.add ("s", Editor.KINDS[ed.kind.selected]);
+            return new Variant.tuple ({
+                phones.save_kinds (),
+                emails.save_kinds (),
+                urls.save_kinds (),
+                adrs.end (),
+                new Variant.string (contact.photo != null ? Base64.encode (contact.photo) : ""),
+                new Variant.string (contact.photo_type),
+                new Variant.uint32 (book_drop != null ? book_drop.selected : 0)
+            });
+        }
+
+        public void restore_draft (Variant draft) {
+            phones.restore_kinds (draft.get_child_value (0));
+            emails.restore_kinds (draft.get_child_value (1));
+            urls.restore_kinds (draft.get_child_value (2));
+            foreach (var ed in address_editors) addresses_box.remove (ed);
+            address_editors.clear ();
+            foreach (string k in draft.get_child_value (3).get_strv ()) {
+                var a = new PostalAddress ();
+                a.kind = k;
+                add_address (a);
+            }
+            string photo = draft.get_child_value (4).get_string ();
+            contact.photo = photo != "" ? Base64.decode (photo) : null;
+            contact.photo_type = draft.get_child_value (5).get_string ();
+            if (book_drop != null) book_drop.selected = draft.get_child_value (6).get_uint32 ();
+            refresh_avatar ();
         }
 
         public static string parse_birthday (string text) {
